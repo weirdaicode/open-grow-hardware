@@ -1,6 +1,6 @@
 # Open Grow Hardware
 
-A $15 touchscreen by your grow tent that tells you, at a glance, whether the air is right for the plants in it.
+A $15 CYD (Cheap Yellow Display) by your grow tent that tells you, at a glance, whether the air is right for the plants in it.
 
 **[Try the live demo in your browser](https://weirdaicode.github.io/open-grow-hardware/)**. It is the real screen layout running on two simulated tents through a 96-second day. No board needed.
 
