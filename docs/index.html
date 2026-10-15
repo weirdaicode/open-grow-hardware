@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LogMyGrow Display Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Hanken+Grotesk:wght@400;500;650&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column, the device is the hero; what it is and how to get it sit under it. */
+:root{
+  --bg:#F3F1EA; --surface:#FFFDF7; --ink:#18221C; --muted:#56635B; --line:#DAD4C4;
+  --accent:#0B7A4A; --sand:#7A663A;
+  --display:'Fraunces',Georgia,serif; --body:'Hanken Grotesk',system-ui,-apple-system,Segoe UI,sans-serif; --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0C1310;--surface:#141E18;--ink:#EDE8DB;--muted:#94A097;--line:#2A3A31;--accent:#5BE8A3;--sand:#CBB98F;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0C1310;--surface:#141E18;--ink:#EDE8DB;--muted:#94A097;--line:#2A3A31;--accent:#5BE8A3;--sand:#CBB98F;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15.5px;line-height:1.55}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+header{display:flex;flex-direction:column;gap:6px;margin-bottom:22px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--sand)}
+h1{font-family:var(--display);font-weight:650;font-size:clamp(28px,5vw,42px);line-height:1.08;margin:0;text-wrap:balance}
+.lede{color:var(--muted);max-width:62ch;margin:0}
+.stage{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:820px){.stage{grid-template-columns:minmax(0,1fr)}}
+/* the device itself is always the dark yellow-PCB board, in both page themes */
+.device{background:#E2B93B;border-radius:18px;padding:16px 16px 12px;box-shadow:0 18px 40px -22px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.18);max-width:100%}
+.bezel{background:#0A0F0C;border-radius:8px;padding:10px;box-shadow:inset 0 0 0 2px #1d241f}
+canvas{display:block;width:100%;aspect-ratio:4/3;max-width:100%;border-radius:3px;touch-action:none;cursor:pointer;background:#000}
+.board{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;font-family:var(--mono);font-size:11px;color:#3b2f0b}
+.btns{display:flex;gap:10px}
+.hw{font:600 11px var(--mono);color:#f5f1e6;background:#2b2b2b;border:0;border-radius:6px;padding:7px 12px;cursor:pointer;box-shadow:0 2px 0 #111}
+.hw:active{transform:translateY(1px);box-shadow:none}
+.hw:focus-visible,.ctl button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.led{width:10px;height:10px;border-radius:50%;background:#333;display:inline-block;vertical-align:-1px;margin-right:6px}
+.side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.panel h2{font-family:var(--display);font-weight:500;font-size:19px;margin:0 0 8px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px}
+.ctl button{font:500 13px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}
+.ctl button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.readout{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:10px}
+.hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+dt{font-family:var(--mono);font-size:12px;color:var(--sand);padding-top:2px}
+dd{margin:0;min-width:0}
+.below{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:30px}
+@media (max-width:820px){.below{grid-template-columns:minmax(0,1fr)}}
+.below h3{font-family:var(--display);font-weight:500;font-size:17px;margin:0 0 6px}
+.below p{margin:0;color:var(--muted);font-size:14.5px}
+.foot{margin-top:28px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+code{font-family:var(--mono);font-size:.9em}
+@media (prefers-reduced-motion:reduce){.hw:active{transform:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">ESP32-2432S028R · 320 × 240 · firmware 3.3</span>
+    <h1>A grow-tent gauge on a $15 screen</h1>
+    <p class="lede">This is the LogMyGrow Display firmware running in your browser on made-up tents. Tap the tabs along the bottom of the screen, swipe, or press BOOT the way you would on the board. Leave it alone for 20 seconds and it drops to the climate dial.</p>
+  </header>
+
+  <div class="stage">
+    <div>
+      <div class="device" aria-label="Simulated Cheap Yellow Display">
+        <div class="bezel"><canvas id="scr" width="320" height="240" tabindex="0" aria-label="Display screen. Arrow keys change pages."></canvas></div>
+        <div class="board">
+          <span><i class="led" id="led"></i>status</span>
+          <span class="btns">
+            <button class="hw" id="boot" type="button" title="Tap: next page. Hold 2 s: settings.">BOOT</button>
+            <button class="hw" id="rst" type="button" title="Restart">RST</button>
+          </span>
+        </div>
+      </div>
+      <p class="readout" id="clock">Day clock</p>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <h2>Try a scenario</h2>
+        <div class="ctl" id="scen">
+          <button type="button" data-s="day" aria-pressed="true">Normal day</button>
+          <button type="button" data-s="night">Lights-off humidity spike</button>
+          <button type="button" data-s="heat">Heat wave</button>
+        </div>
+        <div class="ctl" style="margin-top:10px">
+          <button type="button" id="idle">Show the climate dial</button>
+          <button type="button" id="unit" aria-pressed="false">Show °C</button>
+        </div>
+        <p class="hint">The simulated day runs in 96 seconds: lights on, the afternoon peak, lights off and the humid night. Every number on the screen is computed from that model, not canned.</p>
+      </div>
+      <div class="panel">
+        <h2>What you're looking at</h2>
+        <dl>
+          <dt>Home</dt><dd>One card per space. Temperature, RH and VPD each take the colour of their own tier for the plants' stage.</dd>
+          <dt>Space</dt><dd>VPD large, a band bar per reading (yellow is OK, green is ideal), the top two things to do.</dd>
+          <dt>To do</dt><dd>The most urgent actions across every space.</dd>
+          <dt>Plugs</dt><dd>Plug buttons. Off until the grower allows it in the app.</dd>
+          <dt>Dial</dt><dd>Two crossed needles. Where they meet is your air, drawn over the ideal box, the mold zone and VPD curves.</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="below">
+    <div><h3>Two firmwares</h3><p>The full one reads stage targets, mold risk and to-dos from LogMyGrow. The ESPHome one needs no account: it shows two Home Assistant sensors and works out VPD on the device.</p></div>
+    <div><h3>No cables after day one</h3><p>Pair by a 6-letter code. Updates arrive over the air into the second app slot, checked against their sha256 before the board switches over.</p></div>
+    <div><h3>Open and self-hostable</h3><p>MIT firmware. The server address is a setting in the Wi-Fi portal, so the display can point at your own LogMyGrow server.</p></div>
+  </div>
+
+  <p class="foot">Simulation of firmware 3.3 screens with example tents named Flower Tent and Veg Tent. Real displays show your own spaces. Colours on a real panel are less saturated than on your monitor.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ── bands (the app's published defaults) ─────────────────────────────────────────────── */
+const STAGES={
+  flower:{name:"Flower Tent",stage:"Flower d38",ideal:{t:[20,26],h:[40,55],v:[1.0,1.4]},ok:{t:[17,29],h:[30,60],v:[0.8,1.6]},risk:{t:[13,33],h:[22,70],v:[0.5,2.0]},mold:[55,60,70]},
+  veg:{name:"Veg Tent",stage:"Veg d19",ideal:{t:[22,28],h:[55,70],v:[0.8,1.1]},ok:{t:[18,30],h:[40,80],v:[0.6,1.4]},risk:{t:[13,34],h:[25,88],v:[0.35,1.9]},mold:[72,80,88]}
+};
+const TIER_COL={ideal:"#3FD48A",ok:"#E8CF5A",risk:"#F29A3A",danger:"#F0564A",none:"#59645D"};
+const svp=t=>0.6108*Math.exp(17.27*t/(t+237.3));
+const vpdOf=(t,h)=>Math.max(0,+(svp(t-1.5)-svp(t)*h/100).toFixed(2));
+const tier=(v,b,k)=>{const i=b.ideal[k],o=b.ok[k],r=b.risk[k];if(v>=i[0]&&v<=i[1])return"ideal";if(v>=o[0]&&v<=o[1])return"ok";if(v>=r[0]&&v<=r[1])return"risk";return"danger";};
+const RANK={ideal:0,ok:1,risk:2,danger:3};
+const worst=a=>a.reduce((x,y)=>RANK[y]>RANK[x]?y:x,"ideal");
+
+/* ── a 96-second day: lights on 06:00-18:00 for flower, 18/6 for veg ──────────────────── */
+let scenario="day", useF=true;
+const DAY_MS=96000, t0=performance.now();
+function airAt(key,hour){
+  const lightsOn=key==="flower"?(hour>=6&&hour<18):(hour>=6||hour<0);
+  const on=key==="flower"?[6,18]:[6,24];
+  const ph=lightsOn?Math.sin(Math.PI*Math.min(1,(hour-on[0])/(on[1]-on[0]))):0;
+  let t=key==="flower"?20.5+4.6*ph:22+5*ph, h=key==="flower"?54-11*ph:66-10*ph;
+  if(!lightsOn&&key==="flower"){const since=(hour-18+24)%24;h+=Math.min(6,since*3)*Math.exp(-since/7);}
+  if(scenario==="night"&&key==="flower"&&!lightsOn){h+=12;t-=1.5;}
+  if(scenario==="heat"){t+=lightsOn?6*ph+1:1.5;h-=lightsOn?8*ph:2;}
+  return{t:+t.toFixed(1),h:Math.round(Math.max(15,Math.min(99,h))),lights:lightsOn};
+}
+function nowHour(){return(((performance.now()-t0)%DAY_MS)/DAY_MS*24+9)%24;}
+function snapshot(){
+  const hr=nowHour();
+  return["flower","veg"].map(k=>{const b=STAGES[k],a=airAt(k,hr),v=vpdOf(a.t,a.h);
+    const tt={t:tier(a.t,b,"t"),h:tier(a.h,b,"h"),v:tier(v,b,"v")};
+    const m=b.mold, mold=a.h>=m[2]?"severe":a.h>=m[1]?"high":a.h>=m[0]?"watch":"none";
+    return{key:k,b,...a,v,tt,all:worst([tt.t,tt.h,tt.v,mold==="severe"?"danger":mold==="high"?"risk":"ideal"]),mold};});
+}
+const fmtT=c=>useF?Math.round(c*9/5+32)+"°":c.toFixed(1)+"°";
+function actionsFor(s){
+  const out=[], b=s.b;
+  if(s.mold==="severe"||s.mold==="high")out.push({w:3,txt:`${s.b.name}: dehumidify below ${b.mold[0]}%`});
+  else if(s.mold==="watch")out.push({w:1,txt:`${s.b.name}: RH near the mold line`});
+  if(s.tt.t==="risk"||s.tt.t==="danger")out.push({w:s.tt.t==="danger"?3:2,txt:`${s.b.name}: ${s.t>b.ideal.t[1]?"cool to":"warm to"} ${fmtT(b.ideal.t[s.t>b.ideal.t[1]?1:0])}`});
+  if(s.tt.v==="risk"||s.tt.v==="danger")out.push({w:2,txt:`${s.b.name}: VPD ${s.v} ${s.v>b.ideal.v[1]?"high, raise RH":"low, lower RH"}`});
+  return out;
+}
+
+/* ── screen ───────────────────────────────────────────────────────────────────────────── */
+const cv=document.getElementById("scr"), g=cv.getContext("2d");
+const DPR=Math.max(2,Math.min(3,window.devicePixelRatio||1));
+cv.width=320*DPR; cv.height=240*DPR; g.scale(DPR,DPR);
+const TABS=["Home","Space","To do","Plugs","⚙"];
+let page=0, spaceIx=0, idle=false, lastTouch=performance.now(), settings=false, plugs={Light:true,Fan:true,Dehu:false,Heater:false};
+const MONO="'JetBrains Mono',ui-monospace,monospace", SANS="'Hanken Grotesk',system-ui,sans-serif";
+function txt(s,x,y,size,col,font,align,weight){g.font=`${weight||400} ${size}px ${font||SANS}`;g.fillStyle=col||"#E8EDE9";g.textAlign=align||"left";g.textBaseline="alphabetic";g.fillText(s,x,y);}
+function rr(x,y,w,h,r,fill,stroke){g.beginPath();g.roundRect(x,y,w,h,r);if(fill){g.fillStyle=fill;g.fill();}if(stroke){g.strokeStyle=stroke;g.lineWidth=1;g.stroke();}}
+function statusBar(){g.fillStyle="#0B110D";g.fillRect(0,0,320,16);const hr=nowHour(),hh=Math.floor(hr),mm=Math.floor((hr-hh)*60);
+  txt(`${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`,6,12,10,"#9AA59D",MONO);txt("LogMyGrow",160,12,10,"#CBB98F",SANS,"center",650);txt("wifi ▂▄▆",314,12,9,"#9AA59D",MONO,"right");}
+function tabBar(dot){g.fillStyle="#0B110D";g.fillRect(0,214,320,26);const w=320/TABS.length;
+  TABS.forEach((t,i)=>{const on=i===page;if(on){g.fillStyle="#1E2C24";g.fillRect(i*w,214,w,26);g.fillStyle="#5BE8A3";g.fillRect(i*w+8,214,w-16,2);}
+    txt(t,i*w+w/2,231,11,on?"#EDE8DB":"#7E8A82",SANS,"center",on?650:400);
+    if(i===2&&dot){g.fillStyle="#F29A3A";g.beginPath();g.arc(i*w+w/2+22,222,3,0,7);g.fill();}});}
+function home(S){S.forEach((s,i)=>{const x=6+i*157,y=22,w=151,h=186;rr(x,y,w,h,6,"#141E18");g.fillStyle=TIER_COL[s.all];g.fillRect(x,y+4,3,h-8);
+  txt(s.b.name,x+10,y+18,12.5,"#EDE8DB",SANS,"left",650);txt(s.b.stage+(s.lights?" · lights on":" · dark"),x+10,y+32,9.5,"#8B968E",SANS);
+  const rows=[["TEMP",fmtT(s.t)+(useF?"F":"C"),s.tt.t],["RH",s.h+"%",s.tt.h],["VPD",s.v.toFixed(2),s.tt.v]];
+  rows.forEach((r,j)=>{const yy=y+62+j*38;txt(r[0],x+10,yy,9,"#7E8A82",MONO);txt(r[1],x+w-10,yy+6,22,TIER_COL[r[2]],MONO,"right",600);});
+  txt(s.mold==="none"?"mold: clear":"mold: "+s.mold,x+10,y+h-10,9.5,s.mold==="none"?"#59645D":s.mold==="watch"?TIER_COL.ok:TIER_COL.risk,MONO);});}
+function bar(x,y,w,label,val,b,k,disp){const lo=b.risk[k][0],hi=b.risk[k][1],X=v=>x+(Math.max(lo,Math.min(hi,v))-lo)/(hi-lo)*w;
+  txt(label,x,y-4,9,"#7E8A82",MONO);txt(disp,x+w,y-4,10,TIER_COL[tier(val,b,k)],MONO,"right",600);
+  rr(x,y,w,7,3,"#26332B");g.fillStyle="#6E6232";g.fillRect(X(b.ok[k][0]),y,X(b.ok[k][1])-X(b.ok[k][0]),7);g.fillStyle="#2F8F5E";g.fillRect(X(b.ideal[k][0]),y,X(b.ideal[k][1])-X(b.ideal[k][0]),7);
+  g.fillStyle="#fff";g.fillRect(X(val)-1.5,y-3,3,13);}
+function space(S){const s=S[spaceIx%S.length];txt(s.b.name,10,34,14,"#EDE8DB",SANS,"left",650);txt(`${spaceIx%S.length+1}/${S.length} · swipe`,310,34,9,"#7E8A82",MONO,"right");
+  txt("VPD",10,58,9,"#7E8A82",MONO);txt(s.v.toFixed(2),10,92,38,TIER_COL[s.tt.v],MONO,"left",600);txt("kPa",108,92,11,"#7E8A82",MONO);
+  bar(140,60,170,"TEMP",s.t,s.b,"t",fmtT(s.t)+(useF?"F":"C"));bar(140,86,170,"RH",s.h,s.b,"h",s.h+"%");bar(140,112,170,"VPD",s.v,s.b,"v",s.v.toFixed(2));
+  const a=actionsFor(s).sort((x,y)=>y.w-x.w).slice(0,2);g.fillStyle="#26332B";g.fillRect(10,130,300,1);
+  if(!a.length)txt("Nothing to do. Air is in range.",10,152,11.5,"#9AA59D");else a.forEach((x,i)=>{g.fillStyle=x.w>=3?TIER_COL.danger:TIER_COL.risk;g.beginPath();g.arc(15,148+i*22,3,0,7);g.fill();txt(x.txt.replace(s.b.name+": ",""),24,152+i*22,11.5,"#E8EDE9");});
+  txt("reading 1 min old · Govee H5179",10,204,9,"#59645D",MONO);}
+function todo(S){txt("To do",10,34,14,"#EDE8DB",SANS,"left",650);const all=S.flatMap(actionsFor).sort((x,y)=>y.w-x.w).slice(0,5);
+  if(!all.length)txt("All clear in every space.",10,60,12,"#9AA59D");
+  all.forEach((x,i)=>{const y=46+i*32;rr(8,y,304,27,5,"#141E18");g.fillStyle=x.w>=3?TIER_COL.danger:x.w>=2?TIER_COL.risk:TIER_COL.ok;g.fillRect(8,y+4,3,19);txt(x.txt,18,y+18,11.5,"#E8EDE9");});}
+function plugsPage(){txt("Plugs · Flower Tent",10,34,14,"#EDE8DB",SANS,"left",650);Object.keys(plugs).forEach((k,i)=>{const x=10+(i%2)*152,y=46+Math.floor(i/2)*78,on=plugs[k];
+  rr(x,y,146,70,8,on?"#163A28":"#141E18",on?"#2F8F5E":"#26332B");txt(k,x+12,y+28,15,"#EDE8DB",SANS,"left",650);txt(on?"ON":"off",x+12,y+52,12,on?"#5BE8A3":"#7E8A82",MONO,"left",600);});}
+function settingsPage(){txt("Settings",10,34,14,"#EDE8DB",SANS,"left",650);[["Theme","Dark"],["Brightness","Auto (LDR)"],["Idle screen","Climate dial"],["Wake on alert","On"],["Auto-update","On · 3.3.0"],["Pair again",""]].forEach((r,i)=>{const y=50+i*26;
+  g.fillStyle="#1A2620";g.fillRect(10,y+8,300,1);txt(r[0],12,y,12,"#E8EDE9");txt(r[1],308,y,11,"#8B968E",MONO,"right");});txt("Hold BOOT 2 s to open on the board",160,206,9,"#59645D",MONO,"center");}
+
+/* ── the climate dial: temperature pivots bottom-left, humidity bottom-right ──────────── */
+const PA={x:28,y:238},PB={x:292,y:238},R=226,T_RANGE=[14,34],H_RANGE=[25,95];
+const angT=t=>{const f=(t-T_RANGE[0])/(T_RANGE[1]-T_RANGE[0]);return(-18-f*58)*Math.PI/180;};      /* temperature: low = right and flat, high = steep */
+const angH=h=>{const f=(h-H_RANGE[0])/(H_RANGE[1]-H_RANGE[0]);return(-162+f*58)*Math.PI/180;};     /* humidity: the mirror image from the right pivot */
+function cross(t,h){const a=angT(t),b=angH(h),dx1=Math.cos(a),dy1=Math.sin(a),dx2=Math.cos(b),dy2=Math.sin(b);const den=dx1*dy2-dy1*dx2;const s=((PB.x-PA.x)*dy2-(PB.y-PA.y)*dx2)/den;return{x:PA.x+s*dx1,y:PA.y+s*dy1};}
+function region(tr,hr,fill,stroke){g.beginPath();const N=16;for(let i=0;i<=N;i++){const p=cross(tr[0]+(tr[1]-tr[0])*i/N,hr[0]);i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y);}
+  for(let i=0;i<=N;i++){const p=cross(tr[1],hr[0]+(hr[1]-hr[0])*i/N);g.lineTo(p.x,p.y);}for(let i=N;i>=0;i--){const p=cross(tr[0]+(tr[1]-tr[0])*i/N,hr[1]);g.lineTo(p.x,p.y);}
+  for(let i=N;i>=0;i--){const p=cross(tr[0],hr[0]+(hr[1]-hr[0])*i/N);g.lineTo(p.x,p.y);}g.closePath();if(fill){g.fillStyle=fill;g.fill();}if(stroke){g.strokeStyle=stroke;g.lineWidth=1;g.stroke();}}
+function dial(S){const s=S[0],b=s.b;g.fillStyle="#05080A";g.fillRect(0,0,320,240);
+  g.save();g.beginPath();g.rect(0,0,320,240);g.clip();
+  region([T_RANGE[0],T_RANGE[1]],[b.mold[1],H_RANGE[1]],"rgba(240,86,74,.08)");                       /* bud rot territory */
+  region([T_RANGE[0],T_RANGE[1]],[b.mold[0],b.mold[1]],"rgba(242,154,58,.06)");
+  region(b.ok.t,b.ok.h,"rgba(232,207,90,.10)","rgba(232,207,90,.35)");
+  region(b.ideal.t,b.ideal.h,"rgba(63,212,138,.16)","rgba(63,212,138,.7)");
+  [0.8,1.2,1.6].forEach(V=>{g.beginPath();let first=true;for(let t=12;t<=34;t+=0.5){const h=100*(svp(t-1.5)-V)/svp(t);if(h<H_RANGE[0]||h>99)continue;const p=cross(t,h);first?g.moveTo(p.x,p.y):g.lineTo(p.x,p.y);first=false;}
+    g.strokeStyle="rgba(140,205,218,.35)";g.setLineDash([3,3]);g.lineWidth=1;g.stroke();g.setLineDash([]);
+    const lt=29,lh=100*(svp(lt-1.5)-V)/svp(lt);if(lh>H_RANGE[0]&&lh<H_RANGE[1]){const q=cross(lt,lh);txt(V+" kPa",q.x+4,q.y,7.5,"rgba(140,205,218,.7)",MONO);}});
+  g.lineWidth=1;
+  for(let t=T_RANGE[0];t<=T_RANGE[1];t++){const a=angT(t),major=t%5===0,r1=major?R-9:R-5;g.strokeStyle=major?"rgba(233,163,90,.85)":"rgba(233,163,90,.35)";g.beginPath();g.moveTo(PA.x+Math.cos(a)*r1,PA.y+Math.sin(a)*r1);g.lineTo(PA.x+Math.cos(a)*R,PA.y+Math.sin(a)*R);g.stroke();
+    if(major){const lab=useF?Math.round(t*9/5+32)+"°":t+"°";txt(lab,PA.x+Math.cos(a)*(R+9),PA.y+Math.sin(a)*(R+9)+3,8,"rgba(233,163,90,.9)",MONO,"center");}}
+  for(let h=26;h<=H_RANGE[1];h+=2){const a=angH(h),major=h%10===0,r1=major?R-9:R-5;g.strokeStyle=major?"rgba(127,199,230,.85)":"rgba(127,199,230,.35)";g.beginPath();g.moveTo(PB.x+Math.cos(a)*r1,PB.y+Math.sin(a)*r1);g.lineTo(PB.x+Math.cos(a)*R,PB.y+Math.sin(a)*R);g.stroke();
+    if(h%20===0)txt(h+"%",PB.x+Math.cos(a)*(R-18),PB.y+Math.sin(a)*(R-18)+3,8,"rgba(127,199,230,.9)",MONO,"center");}
+  const p=cross(s.t,s.h),col=TIER_COL[s.all];
+  [[PA,angT(s.t),"#E9A35A"],[PB,angH(s.h),"#7FC7E6"]].forEach(([P,a,c])=>{g.strokeStyle=c;g.lineWidth=2;g.beginPath();g.moveTo(P.x,P.y);g.lineTo(P.x+Math.cos(a)*(R+4),P.y+Math.sin(a)*(R+4));g.stroke();
+    g.lineWidth=4;g.beginPath();g.moveTo(P.x,P.y);g.lineTo(P.x-Math.cos(a)*18,P.y-Math.sin(a)*18);g.stroke();});
+  g.lineWidth=1.5;g.strokeStyle=col;g.beginPath();g.arc(p.x,p.y,7,0,7);g.stroke();g.fillStyle=col;g.beginPath();g.arc(p.x,p.y,2.5,0,7);g.fill();
+  g.restore();
+  rr(6,184,124,46,6,"rgba(5,8,10,.78)");txt(b.name,12,198,10.5,"#EDE8DB",SANS,"left",650);
+  txt(`${fmtT(s.t)}${useF?"F":"C"}  ${s.h}%`,12,213,12,"#EDE8DB",MONO,"left",600);txt(`VPD ${s.v.toFixed(2)} · ${s.all}`,12,225,9.5,col,MONO);
+  txt("tap to wake",314,14,8.5,"rgba(237,232,219,.45)",MONO,"right");}
+
+function draw(){const S=snapshot();
+  const anyDanger=S.some(s=>s.all==="danger"),anyRisk=S.some(s=>s.all==="risk");
+  const led=document.getElementById("led");led.style.background=anyDanger?(Math.floor(performance.now()/400)%2?"#F0564A":"#3a1512"):anyRisk?`rgba(242,154,58,${.35+.35*Math.sin(performance.now()/500)})`:"#2a2a2a";
+  if(!idle&&performance.now()-lastTouch>20000)idle=true;
+  if(idle)dial(S);else{g.fillStyle="#0C1310";g.fillRect(0,0,320,240);statusBar();
+    if(settings)settingsPage();else[()=>home(S),()=>space(S),()=>todo(S),plugsPage,settingsPage][page]();
+    tabBar(S.flatMap(actionsFor).length>0);}
+  const hr=nowHour(),hh=Math.floor(hr),mm=Math.floor((hr-hh)*60);
+  document.getElementById("clock").textContent=`Simulated ${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")} · ${S.map(s=>`${s.b.name} ${fmtT(s.t)}${useF?"F":"C"} ${s.h}% VPD ${s.v.toFixed(2)}`).join(" · ")}`;
+  requestAnimationFrame(draw);}
+
+/* ── input: taps, swipes, keys, BOOT ─────────────────────────────────────────────────── */
+const wake=()=>{lastTouch=performance.now();if(idle){idle=false;return true;}return false;};
+let down=null;
+cv.addEventListener("pointerdown",e=>{down={x:e.offsetX,y:e.offsetY};});
+cv.addEventListener("pointerup",e=>{if(wake()){down=null;return;}const r=cv.getBoundingClientRect(),sx=320/r.width,sy=240/r.height;
+  const x=e.offsetX*sx,y=e.offsetY*sy,dx=down?(e.offsetX-down.x)*sx:0;down=null;settings=false;
+  if(Math.abs(dx)>40){if(page===1)spaceIx=(spaceIx+1)%2;else page=(page+(dx<0?1:TABS.length-1))%TABS.length;return;}
+  if(y>214){page=Math.min(TABS.length-1,Math.floor(x/(320/TABS.length)));return;}
+  if(page===0&&y>22&&y<208){spaceIx=x<160?0:1;page=1;return;}
+  if(page===3&&y>46){const k=Object.keys(plugs)[Math.floor((y-46)/78)*2+(x>160?1:0)];if(k)plugs[k]=!plugs[k];}});
+cv.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();wake();settings=false;page=(page+(e.key==="ArrowRight"?1:TABS.length-1))%TABS.length;}});
+let holdT=null;const boot=document.getElementById("boot");
+boot.addEventListener("pointerdown",()=>{holdT=setTimeout(()=>{holdT=null;wake();settings=true;},2000);});
+boot.addEventListener("pointerup",()=>{if(holdT){clearTimeout(holdT);holdT=null;if(!wake()){settings=false;page=(page+1)%TABS.length;}}});
+boot.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();if(!wake()){settings=false;page=(page+1)%TABS.length;}}});
+document.getElementById("rst").addEventListener("click",()=>{page=0;spaceIx=0;settings=false;idle=false;lastTouch=performance.now();});
+document.getElementById("idle").addEventListener("click",()=>{idle=true;});
+const ub=document.getElementById("unit");ub.addEventListener("click",()=>{useF=!useF;ub.setAttribute("aria-pressed",String(!useF));ub.textContent=useF?"Show °C":"Show °F";});
+document.querySelectorAll("#scen button").forEach(b=>b.addEventListener("click",()=>{scenario=b.dataset.s;document.querySelectorAll("#scen button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));wake();}));
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

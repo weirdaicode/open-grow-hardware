@@ -1,0 +1,105 @@
+# ESPHome for the ESP32-2432S028R "Cheap Yellow Display", reading your grow tent straight from Home Assistant.
+# No LogMyGrow account needed for this one: it shows the HA sensors you name below, computes VPD on the device and
+# colours it against the band you set. (For the LogMyGrow version with stage targets and mould risk, use the Arduino
+# sketch in LogMyGrowDisplay/.) Add the device in HA's ESPHome add-on, paste this, change the three entity ids and the band.
+substitutions:
+  temp_entity: sensor.tent_temperature      # your tent temperature sensor (°C or °F, see temp_is_f)
+  rh_entity: sensor.tent_humidity           # your tent humidity sensor (%)
+  temp_is_f: "false"                        # "true" if the temperature sensor reports °F
+  vpd_low: "1.0"                            # your stage's ideal VPD band in kPa (flower 1.0-1.4, veg 0.8-1.1)
+  vpd_high: "1.4"
+  leaf_offset_c: "2.0"                      # leaf is usually ~2 °C cooler than the air under LEDs
+
+esphome:
+  name: grow-display
+  friendly_name: Grow display
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+api:
+ota:
+  - platform: esphome
+logger:
+
+sensor:
+  - platform: homeassistant
+    id: air_temp
+    entity_id: ${temp_entity}
+    filters:
+      - lambda: 'return ${temp_is_f} ? (x - 32.0) * 5.0 / 9.0 : x;'
+  - platform: homeassistant
+    id: air_rh
+    entity_id: ${rh_entity}
+  - platform: template
+    id: vpd
+    name: "Tent VPD"
+    unit_of_measurement: kPa
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      if (isnan(id(air_temp).state) || isnan(id(air_rh).state)) return NAN;
+      float t = id(air_temp).state, lt = t - ${leaf_offset_c};
+      float svp_leaf = 0.61078 * exp(17.27 * lt / (lt + 237.3));
+      float avp = 0.61078 * exp(17.27 * t / (t + 237.3)) * id(air_rh).state / 100.0;
+      return svp_leaf - avp;
+
+spi:
+  - id: tft_spi
+    clk_pin: GPIO14
+    mosi_pin: GPIO13
+    miso_pin: GPIO12
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: backlight_pwm
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "Display backlight"
+    restore_mode: ALWAYS_ON
+
+font:
+  - file: "gfonts://Roboto@700"
+    id: big
+    size: 64
+  - file: "gfonts://Roboto"
+    id: small
+    size: 18
+
+color:
+  - id: c_bg
+    hex: "0e1411"
+  - id: c_text
+    hex: "ecf0e9"
+  - id: c_muted
+    hex: "93a094"
+  - id: c_ideal
+    hex: "79e0a0"
+  - id: c_ok
+    hex: "e9b352"
+  - id: c_danger
+    hex: "e07a6f"
+
+display:
+  - platform: ili9xxx
+    model: ILI9341
+    spi_id: tft_spi
+    cs_pin: GPIO15
+    dc_pin: GPIO2
+    invert_colors: false
+    rotation: 90
+    update_interval: 5s
+    lambda: |-
+      it.fill(id(c_bg));
+      float v = id(vpd).state, lo = ${vpd_low}, hi = ${vpd_high};
+      auto col = isnan(v) ? id(c_muted) : (v >= lo && v <= hi) ? id(c_ideal) : (v >= lo - 0.2 && v <= hi + 0.3) ? id(c_ok) : id(c_danger);
+      it.print(10, 8, id(small), id(c_muted), "VPD kPa");
+      if (isnan(v)) it.print(10, 34, id(big), id(c_muted), "--"); else it.printf(10, 34, id(big), col, "%.2f", v);
+      it.printf(10, 120, id(small), id(c_muted), "ideal %.1f-%.1f", lo, hi);
+      float t = id(air_temp).state;
+      if (${temp_is_f}) it.printf(10, 160, id(small), id(c_text), "Temp %.1f F", t * 9.0 / 5.0 + 32.0); else it.printf(10, 160, id(small), id(c_text), "Temp %.1f C", t);
+      it.printf(10, 190, id(small), id(c_text), "Humidity %.0f %%", id(air_rh).state);
